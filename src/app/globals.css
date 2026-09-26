@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/* Tokens de color: cambian solos con el modo oscuro del sistema */
+:root {
+  --bg: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --text: #0b0b0b;
+  --muted: #52514e;
+  --border: #e2e1dc;
+  --accent: #2a78d6;
+  --accent-fg: #ffffff;
+  --pos: #006300;
+  --neg: #c22f2f;
+  --warn-fg: #8a5a00;
+  /* status (con ícono + texto, nunca solo color) */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-critical: #d03b3b;
+  /* series de gráficos */
+  --series-1: #2a78d6; /* ingresos */
+  --series-2: #eb6834; /* egresos */
+  --series-3: #1baf7a; /* ahorro + inversiones */
+  --grid: #e7e6e2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111110;
+    --surface: #1a1a19;
+    --surface-2: #242422;
+    --text: #ffffff;
+    --muted: #c3c2b7;
+    --border: #33332f;
+    --accent: #3987e5;
+    --accent-fg: #ffffff;
+    --pos: #4cc24c;
+    --neg: #ef7b7b;
+    --warn-fg: #fab219;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --grid: #2c2c29;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-warn: var(--warn-fg);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-critical: var(--status-critical);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-2xl;
+  }
+  .label {
+    @apply block text-sm font-medium text-muted mb-1;
+  }
+  .input {
+    @apply w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-base text-text outline-none focus:border-accent focus:ring-2 focus:ring-accent/25;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text hover:bg-surface-2 disabled:opacity-50 cursor-pointer;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg hover:opacity-90 disabled:opacity-50 cursor-pointer;
+  }
+  .btn-sm {
+    @apply inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-surface-2 disabled:opacity-40 cursor-pointer;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-neg hover:bg-surface-2 cursor-pointer;
+  }
+  .h1 {
+    @apply text-xl font-semibold;
+  }
+  .h2 {
+    @apply text-base font-semibold;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
