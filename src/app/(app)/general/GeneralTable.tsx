@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import { formatNumber } from "@/lib/format";
+import CellEditor, { type CeldaSeleccionada } from "./CellEditor";
 
 export type FilaGeneral = {
   id: string;
@@ -12,24 +13,42 @@ export type FilaGeneral = {
   total: number;
   hijos?: FilaGeneral[];
   archivada?: boolean;
+  /** true = sus celdas se pueden editar (categoría sin subcategorías o subcategoría) */
+  editable?: boolean;
+  nombreCompleto?: string;
+  permiteNegativo?: boolean;
 };
 
 export type SeccionGeneral = { titulo: string; color: string; filas: FilaGeneral[]; total?: FilaGeneral };
 
 /** Celda numérica: vacía se muestra como "·", negativos en rojo. */
-function Celda({ v, fuerte, apagada }: { v: number; fuerte?: boolean; apagada?: boolean }) {
+function Celda({ v, fuerte, apagada, onEdit }: { v: number; fuerte?: boolean; apagada?: boolean; onEdit?: () => void }) {
   const n = Math.round(v) || 0;
+  const contenido =
+    n === 0 ? <span className="text-muted">·</span> : <span className={n < 0 ? "text-neg" : ""}>{formatNumber(n)}</span>;
   return (
-    <td className={`px-2 py-1.5 text-right whitespace-nowrap ${fuerte ? "font-semibold" : ""} ${apagada ? "opacity-50" : ""}`}>
-      {n === 0 ? <span className="text-muted">·</span> : <span className={n < 0 ? "text-neg" : ""}>{formatNumber(n)}</span>}
+    <td className={`text-right whitespace-nowrap ${fuerte ? "font-semibold" : ""} ${apagada ? "opacity-50" : ""} ${onEdit ? "p-0" : "px-2 py-1.5"}`}>
+      {onEdit ? (
+        <button
+          type="button"
+          onClick={onEdit}
+          title="Editar"
+          className="w-full px-2 py-1.5 text-right rounded hover:bg-accent/15 hover:outline hover:outline-1 hover:outline-accent"
+        >
+          {contenido}
+        </button>
+      ) : (
+        contenido
+      )}
     </td>
   );
 }
 
 export default function GeneralTable({
-  anio, meses, conDatos, mesActual, secciones,
+  anio, meses, conDatos, mesActual, secciones, personas,
 }: {
   anio: number;
+  personas: { id: string; name: string }[];
   meses: string[];
   conDatos: boolean[];
   mesActual: number;
@@ -37,6 +56,12 @@ export default function GeneralTable({
 }) {
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const [ocultarVacias, setOcultarVacias] = useState(true);
+  const [celda, setCelda] = useState<CeldaSeleccionada | null>(null);
+  const mesDe = (i: number) => `${anio}-${String(i + 1).padStart(2, "0")}`;
+  const editar = (f: FilaGeneral, i: number) =>
+    f.editable
+      ? () => setCelda({ categoryId: f.id, nombre: f.nombreCompleto ?? f.label, mes: mesDe(i), permiteNegativo: Boolean(f.permiteNegativo) })
+      : undefined;
 
   const conHijos = secciones.flatMap((s) => s.filas.filter((f) => f.hijos?.length).map((f) => f.id));
   const alternar = (id: string) =>
@@ -127,7 +152,7 @@ export default function GeneralTable({
                             )}
                           </td>
                           {f.valores.map((v, i) => (
-                            <Celda key={i} v={v} apagada={!conDatos[i]} />
+                            <Celda key={i} v={v} apagada={!conDatos[i]} onEdit={editar(f, i)} />
                           ))}
                           <Celda v={f.total} fuerte />
                         </tr>
@@ -136,7 +161,7 @@ export default function GeneralTable({
                             <tr key={h.id} className="text-muted hover:bg-surface-2 group">
                               <td className={`${stickyCol} group-hover:bg-surface-2 pl-10 pr-3 py-1 truncate`}>{h.label}</td>
                               {h.valores.map((v, i) => (
-                                <Celda key={i} v={v} apagada={!conDatos[i]} />
+                                <Celda key={i} v={v} apagada={!conDatos[i]} onEdit={editar(h, i)} />
                               ))}
                               <Celda v={h.total} />
                             </tr>
@@ -162,8 +187,12 @@ export default function GeneralTable({
         </table>
       </div>
       <p className="text-xs text-muted mt-2">
-        Toca una categoría para ver sus subcategorías. Toca un mes para abrir su resumen. Los meses sin movimientos aparecen atenuados.
+        Toca una categoría para ver sus subcategorías y toca un monto para editarlo (las categorías con subcategorías se
+        editan desde sus subcategorías). Toca un mes para abrir su resumen.
       </p>
+      {celda && (
+        <CellEditor key={`${celda.categoryId}-${celda.mes}`} celda={celda} personas={personas} onClose={() => setCelda(null)} />
+      )}
     </>
   );
 }

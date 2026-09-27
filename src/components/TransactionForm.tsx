@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { saveTransaction, type ActionState } from "@/app/actions";
+import { useActionState, useMemo, useState, useTransition } from "react";
+import { deleteTransactionById, saveTransaction, type ActionState } from "@/app/actions";
 import { useSubmitNoReset } from "./useSubmitNoReset";
 import { guardarCookie } from "@/lib/client-prefs";
-import { formatNumber } from "@/lib/format";
+import { addMonths, formatNumber, periodLabel } from "@/lib/format";
 import { PERSONA_COOKIE, type CategoryType } from "@/lib/types";
 
 export type CategoryOption = { id: string; parentId: string | null; type: CategoryType; name: string };
@@ -33,12 +33,16 @@ const TIPOS: { value: CategoryType; label: string }[] = [
 
 
 export default function TransactionForm({
-  categories, personas, initial,
+  categories, personas, initial, onDone,
 }: {
   categories: CategoryOption[];
   personas: PersonaOption[];
   initial: TransactionInitial;
+  /** Modo en línea (lista de movimientos): se llama al guardar o borrar, sin salir de la página. */
+  onDone?: () => void;
 }) {
+  const inline = Boolean(onDone);
+  const [borrando, startBorrar] = useTransition();
   const esEdicion = Boolean(initial.id);
   const [type, setType] = useState<CategoryType>(initial.type);
   const [topId, setTopId] = useState(initial.topId);
@@ -47,7 +51,6 @@ export default function TransactionForm({
   const [retiro, setRetiro] = useState(initial.retiro);
   const [date, setDate] = useState(initial.date);
   const [period, setPeriod] = useState(initial.period);
-  const [periodTouched, setPeriodTouched] = useState(esEdicion && initial.period !== initial.date.slice(0, 7));
   const [personaId, setPersonaId] = useState(initial.personaId);
   const [note, setNote] = useState(initial.note);
 
@@ -55,7 +58,8 @@ export default function TransactionForm({
     // Recuerda la última persona usada en este dispositivo (la lee el servidor al abrir el formulario)
     guardarCookie(PERSONA_COOKIE, personaId || "ambos");
     const res = await saveTransaction(prev, fd);
-    if (res?.ok) {
+    if (res?.ok && inline) onDone?.();
+    else if (res?.ok) {
       setAmount("");
       setNote("");
     }
@@ -69,6 +73,16 @@ export default function TransactionForm({
   const categoryId = subs.length ? subId : topId;
   const conSentido = type === "ahorro" || type === "inversion";
 
+  // Ingreso pagado en los últimos días del mes (sueldo anticipado): sugerir el mes siguiente
+  const sugerencia = (() => {
+    if (type !== "ingreso" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    const [y, m, d] = date.split("-").map(Number);
+    const diasMes = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    if (diasMes - d > 6) return null; // solo la última semana del mes
+    const siguiente = addMonths(date.slice(0, 7), 1);
+    return period === date.slice(0, 7) ? siguiente : null;
+  })();
+
   function cambiarTipo(t: CategoryType) {
     setType(t);
     setTopId("");
@@ -79,6 +93,7 @@ export default function TransactionForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
+      {inline && <input type="hidden" name="inline" value="1" />}
       <input type="hidden" name="category_id" value={categoryId} />
       <input type="hidden" name="persona_id" value={personaId} />
       <input type="hidden" name="sentido" value={retiro ? "retiro" : "aporte"} />
@@ -163,34 +178,37 @@ export default function TransactionForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="label">Fecha</span>
-          <input
-            type="date"
-            name="date"
-            required
-            className="input"
-            value={date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              if (!periodTouched && e.target.value) setPeriod(e.target.value.slice(0, 7));
-            }}
-          />
-        </label>
-        <label className="block">
-          <span className="label">Mes contable</span>
+          <span className="label">Mes al que corresponde</span>
           <input
             type="month"
             name="period"
             required
-            className="input"
+            className="input font-semibold"
             value={period}
-            onChange={(e) => {
-              setPeriod(e.target.value);
-              setPeriodTouched(true);
-            }}
+            onChange={(e) => setPeriod(e.target.value)}
           />
         </label>
+        <label className="block">
+          <span className="label">Fecha del pago</span>
+          <input type="date" name="date" required className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
       </div>
+      {/* El mes NO sigue a la fecha: el sueldo llega días antes del mes al que corresponde */}
+      {sugerencia && (
+        <button
+          type="button"
+          onClick={() => setPeriod(sugerencia)}
+          className="w-full text-left text-sm rounded-xl px-3 py-2 card-tint"
+          style={{ "--tint": "var(--accent)" } as React.CSSProperties}
+        >
+          💡 ¿Es de {periodLabel(sugerencia)}? <b className="text-accent">Imputar a {periodLabel(sugerencia).split(" ")[0]}</b>
+        </button>
+      )}
+      {!sugerencia && date && period && date.slice(0, 7) !== period && (
+        <p className="text-xs text-muted -mt-2">
+          Pagado en {periodLabel(date.slice(0, 7))}, se registrará en <b className="text-text">{periodLabel(period)}</b>.
+        </p>
+      )}
 
       <label className="block">
         <span className="label">Nota (opcional)</span>
@@ -215,6 +233,25 @@ export default function TransactionForm({
           <button type="submit" name="seguir" value="1" disabled={pending} className="btn flex-1">
             Guardar y agregar otro
           </button>
+        )}
+        {inline && (
+          <>
+            <button type="button" onClick={onDone} className="btn flex-1">Cerrar</button>
+            <button
+              type="button"
+              disabled={borrando}
+              className="btn flex-1 !text-neg"
+              onClick={() => {
+                if (!initial.id || !confirm("¿Borrar este movimiento? No se puede deshacer.")) return;
+                startBorrar(async () => {
+                  const res = await deleteTransactionById(initial.id!);
+                  if (res?.ok) onDone?.();
+                });
+              }}
+            >
+              {borrando ? "Borrando…" : "Borrar"}
+            </button>
+          </>
         )}
       </div>
     </form>

@@ -67,7 +67,118 @@ export async function saveTransaction(_prev: ActionState, fd: FormData): Promise
   refrescar();
 
   if (str(fd, "seguir") === "1") return { ok: true, message: "Guardado. Puedes agregar otro." };
+  if (str(fd, "inline") === "1") return { ok: true, message: "Guardado." }; // edición desde la lista
   redirect(`/movimientos?mes=${period}`);
+}
+
+/** Borra sin redirigir (edición en línea de la lista / vista general). */
+export async function deleteTransactionById(id: string): Promise<ActionState> {
+  await requireSession();
+  if (!UUID_RE.test(id)) return { error: "Movimiento inválido." };
+  check(await db().from("transactions").delete().eq("id", id));
+  refrescar();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Delta -> ahorro
+// ---------------------------------------------------------------------------
+
+/** Registra el sobrante del mes como aporte a un instrumento de ahorro. */
+export async function transferDeltaToSavings(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  await requireSession();
+  const mes = str(fd, "mes");
+  const categoryId = str(fd, "category_id");
+  const monto = Number(str(fd, "amount").replace(/\D/g, ""));
+  if (!isPeriod(mes)) return { error: "Mes inválido." };
+  if (!Number.isSafeInteger(monto) || monto <= 0) return { error: "El monto debe ser mayor a 0." };
+  const cat = (await getCategoryIndex()).get(categoryId);
+  if (!cat || cat.type !== "ahorro") return { error: "Elige dónde ahorrar." };
+  // Fecha: hoy si estamos en ese mes; si no, el último día del mes
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+  const [y, m] = mes.split("-").map(Number);
+  const fecha = hoy.startsWith(mes) ? hoy : `${mes}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
+  check(
+    await db().from("transactions").insert({
+      date: fecha,
+      period: periodToDate(mes),
+      amount: monto,
+      category_id: cat.id,
+      persona_id: null,
+      note: "Traspaso del sobrante (delta) del mes",
+    }),
+  );
+  refrescar();
+  return { ok: true, message: `Se traspasaron $${monto.toLocaleString("es-CL")} a ${cat.fullName}.` };
+}
+
+// ---------------------------------------------------------------------------
+// Edición de celdas de la vista General
+// ---------------------------------------------------------------------------
+
+export type MovCelda = { id: string; date: string; amount: number; persona_id: string | null; note: string | null };
+
+export async function getCellMovements(categoryId: string, mes: string): Promise<MovCelda[]> {
+  await requireSession();
+  if (!UUID_RE.test(categoryId) || !isPeriod(mes)) return [];
+  const res = await db()
+    .from("transactions")
+    .select("id, date, amount, persona_id, note")
+    .eq("category_id", categoryId)
+    .eq("period", periodToDate(mes))
+    .order("date");
+  return check(res) ?? [];
+}
+
+/** Valida un monto con signo: negativo solo para ahorro/inversión (retiros). */
+function montoValido(monto: number, tipo: CategoryType): string | null {
+  if (!Number.isSafeInteger(monto) || monto === 0) return "El monto no puede ser 0.";
+  if (monto < 0 && tipo !== "ahorro" && tipo !== "inversion") return "Solo ahorro/inversión aceptan montos negativos.";
+  return null;
+}
+
+export async function quickUpdateTransaction(id: string, amount: number, note: string): Promise<ActionState> {
+  await requireSession();
+  if (!UUID_RE.test(id)) return { error: "Movimiento inválido." };
+  const mov = check(await db().from("transactions").select("category_id").eq("id", id).maybeSingle());
+  if (!mov) return { error: "El movimiento ya no existe." };
+  const cat = (await getCategoryIndex()).get(mov.category_id);
+  const err = montoValido(amount, cat?.type ?? "gasto");
+  if (err) return { error: err };
+  check(
+    await db()
+      .from("transactions")
+      .update({ amount, note: note.trim().slice(0, 1000) || null, updated_at: new Date().toISOString() })
+      .eq("id", id),
+  );
+  refrescar();
+  return { ok: true };
+}
+
+export async function quickCreateTransaction(
+  categoryId: string, mes: string, amount: number, personaId: string | null, note: string,
+): Promise<ActionState> {
+  await requireSession();
+  if (!isPeriod(mes)) return { error: "Mes inválido." };
+  const categorias = await getCategoryIndex();
+  const cat = categorias.get(categoryId);
+  if (!cat) return { error: "Categoría inválida." };
+  if ([...categorias.values()].some((c) => c.parent_id === cat.id)) return { error: "Usa una subcategoría." };
+  const err = montoValido(amount, cat.type);
+  if (err) return { error: err };
+  if (personaId && !(await getPersonas()).some((p) => p.id === personaId)) return { error: "Persona inválida." };
+  check(
+    await db().from("transactions").insert({
+      date: periodToDate(mes),
+      period: periodToDate(mes),
+      amount,
+      category_id: cat.id,
+      persona_id: personaId || null,
+      note: note.trim().slice(0, 1000) || null,
+    }),
+  );
+  refrescar();
+  return { ok: true };
 }
 
 export type FilaCopia = { category_id: string; amount: number; persona_id: string | null; day: number };

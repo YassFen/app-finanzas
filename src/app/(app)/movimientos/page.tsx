@@ -1,10 +1,12 @@
 import Link from "next/link";
 import MonthPicker from "@/components/MonthPicker";
 import { EmptyState, Money, PageHeader } from "@/components/ui";
+import MovementsList, { type FilaMovimiento } from "./MovementsList";
+import { formOptions } from "./form-data";
 import { requireSession } from "@/lib/auth";
 import { TYPE_COLORS } from "@/lib/colors";
 import { getCategoryIndex, getPersonas, getTransactions } from "@/lib/data";
-import { addMonths, dateShort, parsePeriodParam, periodLabel } from "@/lib/format";
+import { dateToPeriod, parsePeriodParam, periodLabel } from "@/lib/format";
 import { TYPE_LABELS, type CategoryType } from "@/lib/types";
 
 const FILTROS: { value: CategoryType | ""; label: string }[] = [
@@ -24,6 +26,31 @@ export default async function MovimientosPage({ searchParams }: PageProps<"/movi
   const nombrePersona = new Map(personas.map((p) => [p.id, p.name]));
 
   const filtrados = movs.filter((m) => !tipo || categorias.get(m.category_id)?.type === tipo);
+  // Datos para editar cada movimiento directamente en la lista
+  const opciones = await formOptions([...new Set(filtrados.flatMap((m) => [m.category_id, categorias.get(m.category_id)?.topId ?? ""]))]);
+  const filas: FilaMovimiento[] = filtrados.map((m) => {
+    const c = categorias.get(m.category_id);
+    return {
+      id: m.id,
+      date: m.date,
+      amount: m.amount,
+      titulo: c?.fullName ?? "¿Categoría borrada?",
+      detalle: [m.persona_id ? nombrePersona.get(m.persona_id) : "Ambos", c && TYPE_LABELS[c.type], m.note].filter(Boolean).join(" · "),
+      color: c ? TYPE_COLORS[c.type] : "var(--muted)",
+      initial: {
+        id: m.id,
+        type: c?.type ?? "gasto",
+        topId: c?.topId ?? "",
+        subId: c && c.parent_id ? c.id : "",
+        amount: Math.abs(m.amount),
+        retiro: m.amount < 0,
+        date: m.date,
+        period: dateToPeriod(m.period),
+        personaId: m.persona_id ?? "",
+        note: m.note ?? "",
+      },
+    };
+  });
   const totalPorTipo = (t: CategoryType) =>
     movs.filter((m) => categorias.get(m.category_id)?.type === t).reduce((s, m) => s + m.amount, 0);
 
@@ -35,7 +62,7 @@ export default async function MovimientosPage({ searchParams }: PageProps<"/movi
 
       <div className="flex gap-2 mb-3">
         <Link href={`/movimientos/copiar?mes=${periodo}`} className="btn !py-2 flex-1 sm:flex-none">
-          ⧉ Copiar gastos de {periodLabel(addMonths(periodo, -1)).split(" ")[0].toLowerCase()}
+          ⧉ Copiar gastos de un mes anterior
         </Link>
         <Link href={`/movimientos/nuevo?mes=${periodo}`} className="btn-primary !py-2 hidden sm:inline-flex">
           + Nuevo
@@ -69,33 +96,9 @@ export default async function MovimientosPage({ searchParams }: PageProps<"/movi
           <Link href={`/movimientos/nuevo?mes=${periodo}`} className="text-accent font-medium">Agregar uno</Link>
         </EmptyState>
       ) : (
-        <ul className="card divide-y divide-border overflow-hidden">
-          {filtrados.map((m) => {
-            const c = categorias.get(m.category_id);
-            const color = c ? TYPE_COLORS[c.type] : "var(--muted)";
-            return (
-              <li key={m.id}>
-                <Link href={`/movimientos/${m.id}?mes=${periodo}`} className="flex items-start gap-3 px-4 py-3 hover:bg-surface-2 relative">
-                  <span className="absolute left-0 inset-y-2 w-1 rounded-r" style={{ background: color }} aria-hidden />
-                  <div className="text-xs text-muted w-12 shrink-0 pt-0.5 num">{dateShort(m.date)}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{c?.fullName ?? "¿Categoría borrada?"}</div>
-                    <div className="text-xs text-muted truncate">
-                      {m.persona_id ? nombrePersona.get(m.persona_id) : "Ambos"}
-                      {c && ` · ${TYPE_LABELS[c.type]}`}
-                      {m.note && ` · ${m.note}`}
-                    </div>
-                  </div>
-                  <div className="text-sm font-semibold">
-                    <Money value={m.amount} />
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <MovementsList filas={filas} categories={opciones.categories} personas={opciones.personas} />
       )}
-      <p className="text-xs text-muted mt-3">{filtrados.length} movimiento(s). Toca uno para editarlo o borrarlo.</p>
+      <p className="text-xs text-muted mt-3">{filtrados.length} movimiento(s). Toca uno para editarlo o borrarlo aquí mismo.</p>
     </>
   );
 }

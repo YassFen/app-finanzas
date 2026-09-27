@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MonthPicker from "@/components/MonthPicker";
 import { MonthlyChart } from "@/components/charts";
+import DeltaToSavings from "@/components/DeltaToSavings";
 import { EmptyState, Money, PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
 import { TYPE_COLORS, categoryColor } from "@/lib/colors";
@@ -38,6 +39,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   }
   const gastosCat = [...porCategoria.entries()].sort((a, b) => b[1].total - a[1].total);
   const maxCat = Math.max(1, ...gastosCat.map(([, g]) => g.total));
+  // Instrumentos de ahorro disponibles para traspasar el delta
+  const instrumentosAhorro = [...categorias.values()]
+    .filter((c) => c.type === "ahorro" && !c.archivadaEfectiva)
+    .filter((c) => c.parent_id || ![...categorias.values()].some((h) => h.parent_id === c.id))
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((c) => ({ id: c.id, nombre: c.name }));
+
   // Color fijo por categoría (según su orden en Categorías, no por monto)
   const posicion = new Map(
     [...categorias.values()]
@@ -54,7 +62,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-3">
         <Link href={`/movimientos/copiar?mes=${periodo}`} className="btn !py-2 shrink-0">
-          ⧉ Copiar gastos del mes anterior
+          ⧉ Copiar gastos de un mes anterior
         </Link>
         <Link href={`/general?anio=${periodo.slice(0, 4)}`} className="btn !py-2 shrink-0">
           ▦ Vista general del año
@@ -65,7 +73,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <div className="mb-4">
           <EmptyState>
             No hay movimientos en {periodLabel(periodo)}.{" "}
-            <Link href={`/movimientos/copiar?mes=${periodo}`} className="text-accent font-medium">Copiar gastos del mes anterior</Link>
+            <Link href={`/movimientos/copiar?mes=${periodo}`} className="text-accent font-medium">Copiar gastos de un mes anterior</Link>
             {" · "}
             <Link href={`/movimientos/nuevo?mes=${periodo}`} className="text-accent font-medium">Agregar uno</Link>
             {" · "}
@@ -86,6 +94,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             value={r.delta}
             hint="Ingresos − egresos − ahorro − inversiones"
           />
+          <DeltaToSavings key={periodo} mes={periodo} delta={r.delta} instrumentos={instrumentosAhorro} />
         </div>
       </section>
 
@@ -100,6 +109,19 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
               value={r.asignacionSupervivencia}
               color="var(--series-5)"
             />
+            {/* Cuánto le toca a cada uno */}
+            <div className="grid grid-cols-2 gap-2 pl-4">
+              {r.supervivencia.map((p, i) => (
+                <div
+                  key={p.personaId}
+                  className="card-tint px-2.5 py-1.5"
+                  style={{ "--tint": i === 0 ? "var(--series-1)" : "var(--series-5)" } as React.CSSProperties}
+                >
+                  <div className="text-xs text-muted">Para {p.nombre} ({formatPct(p.porcentaje, 0)})</div>
+                  <div className="font-semibold"><Money value={p.asignado} /></div>
+                </div>
+              ))}
+            </div>
             <div className="border-t border-border pt-2">
               <Row label="Total egresos" value={r.egresos} strong />
             </div>

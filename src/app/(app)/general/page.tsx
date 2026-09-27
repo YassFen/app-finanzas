@@ -39,15 +39,23 @@ export default async function GeneralPage({ searchParams }: PageProps<"/general"
 
   function filasDe(tops: CategoryInfo[], color: (c: CategoryInfo) => string): FilaGeneral[] {
     return tops.map((top) => {
+      const permiteNegativo = top.type === "ahorro" || top.type === "inversion"; // retiros
       const valores = valoresDe((c) => c.id === top.id || c.parent_id === top.id);
       const hijos = [...categorias.values()]
         .filter((c) => c.parent_id === top.id)
         .sort(orden)
         .map((sub) => {
           const v = valoresDe((c) => c.id === sub.id);
-          return { id: sub.id, label: sub.name, valores: v, total: suma(v) };
+          return {
+            id: sub.id, label: sub.name, valores: v, total: suma(v),
+            editable: true, nombreCompleto: sub.fullName, permiteNegativo,
+          };
         });
-      return { id: top.id, label: top.name, color: color(top), valores, total: suma(valores), hijos, archivada: top.archived };
+      return {
+        id: top.id, label: top.name, color: color(top), valores, total: suma(valores), hijos, archivada: top.archived,
+        // Una categoría sin subcategorías se edita directo; con subcategorías, desde cada una
+        editable: hijos.length === 0, nombreCompleto: top.name, permiteNegativo,
+      };
     });
   }
 
@@ -85,7 +93,7 @@ export default async function GeneralPage({ searchParams }: PageProps<"/general"
       "Supervivencia",
       "var(--series-5)",
       resumenes[0].supervivencia.map((p, k) =>
-        fila(`sup-${p.personaId}`, p.nombre, resumenes.map((r) => r.supervivencia[k]?.asignado ?? 0), k === 0 ? "var(--series-1)" : "var(--series-5)"),
+        fila(`sup-${p.personaId}`, `Para ${p.nombre}`, resumenes.map((r) => r.supervivencia[k]?.asignado ?? 0), k === 0 ? "var(--series-1)" : "var(--series-5)"),
       ),
     ),
     seccion("Ahorro", TYPE_COLORS.ahorro, filasDe(topsDe("ahorro"), () => TYPE_COLORS.ahorro)),
@@ -107,6 +115,7 @@ export default async function GeneralPage({ searchParams }: PageProps<"/general"
         conDatos={conDatos}
         mesActual={actual.startsWith(String(anio)) ? Number(actual.slice(5, 7)) - 1 : -1}
         secciones={secciones}
+        personas={personas.map((p) => ({ id: p.id, name: p.name }))}
       />
     </>
   );

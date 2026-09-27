@@ -4,13 +4,18 @@ import { EmptyState, PageHeader } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
 import { categoryColor } from "@/lib/colors";
 import { getCategoryIndex, getPersonas, getTransactions } from "@/lib/data";
-import { addMonths, parsePeriodParam, periodLabel } from "@/lib/format";
+import { addMonths, isPeriod, parsePeriodParam, periodLabel } from "@/lib/format";
 import CopyForm, { type ItemCopia } from "./CopyForm";
+import SourcePicker from "./SourcePicker";
 
 export default async function CopiarPage({ searchParams }: PageProps<"/movimientos/copiar">) {
   await requireSession();
-  const periodo = parsePeriodParam((await searchParams).mes);
-  const anterior = addMonths(periodo, -1);
+  const sp = await searchParams;
+  const periodo = parsePeriodParam(sp.mes);
+  // Mes de origen: ?desde=YYYY-MM (dentro de los 12 meses previos); por defecto el mes anterior
+  const desdeParam = typeof sp.desde === "string" ? sp.desde : "";
+  const anterior =
+    isPeriod(desdeParam) && desdeParam < periodo && desdeParam >= addMonths(periodo, -12) ? desdeParam : addMonths(periodo, -1);
   const [previos, actuales, categorias, personas] = await Promise.all([
     getTransactions(anterior),
     getTransactions(periodo),
@@ -59,6 +64,9 @@ export default async function CopiarPage({ searchParams }: PageProps<"/movimient
       <PageHeader title="Copiar gastos">
         <MonthPicker periodo={periodo} />
       </PageHeader>
+      <div className="mb-3">
+        <SourcePicker mes={periodo} desde={anterior} />
+      </div>
       <p className="text-sm text-muted mb-3">
         Gastos de <b className="text-text">{periodLabel(anterior)}</b> para registrar en <b className="text-text">{periodLabel(periodo)}</b>.
         Marca los que se repiten y ajusta el monto si cambió. Los que ya registraste este mes aparecen desmarcados.
@@ -69,7 +77,7 @@ export default async function CopiarPage({ searchParams }: PageProps<"/movimient
           <Link href={`/movimientos/nuevo?mes=${periodo}`} className="text-accent font-medium">Agregar uno</Link>
         </EmptyState>
       ) : (
-        <CopyForm key={periodo} mes={periodo} items={items} />
+        <CopyForm key={`${periodo}-${anterior}`} mes={periodo} items={items} />
       )}
     </div>
   );
