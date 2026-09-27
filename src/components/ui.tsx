@@ -5,7 +5,10 @@ import type { Estado } from "@/lib/finanzas";
 export function PageHeader({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <h1 className="h1">{title}</h1>
+      <h1 className="h1 flex items-center gap-2">
+        <span className="h-6 w-1.5 rounded-full header-grad" aria-hidden />
+        {title}
+      </h1>
       {children}
     </div>
   );
@@ -13,7 +16,7 @@ export function PageHeader({ title, children }: { title: string; children?: Reac
 
 /** Tarjeta con un monto grande y variación opcional vs mes anterior. */
 export function Stat({
-  label, value, variacion, invertir = false, hint,
+  label, value, variacion, invertir = false, hint, color = "var(--accent)",
 }: {
   label: string;
   value: number;
@@ -21,12 +24,18 @@ export function Stat({
   /** true para egresos: subir es malo */
   invertir?: boolean;
   hint?: string;
+  /** color de la tarjeta (token CSS) */
+  color?: string;
 }) {
   const bueno = variacion == null || variacion === 0 ? null : invertir ? variacion < 0 : variacion > 0;
   const redondeado = Math.round(value) || 0; // evita "-0" por decimales de la supervivencia
   return (
-    <div className="card p-3.5">
-      <div className="text-xs text-muted">{label}</div>
+    <div className="card-tint p-3.5 relative overflow-hidden" style={{ "--tint": color } as React.CSSProperties}>
+      <div className="absolute inset-y-0 left-0 w-1" style={{ background: color }} aria-hidden />
+      <div className="text-xs font-medium flex items-center gap-1.5">
+        <span className="size-2 rounded-full" style={{ background: color }} aria-hidden />
+        {label}
+      </div>
       <div className={`text-lg font-semibold num mt-0.5 ${redondeado < 0 ? "text-neg" : ""}`}>{formatCLP(redondeado)}</div>
       {variacion !== undefined && (
         <div className={`text-xs num mt-0.5 ${bueno === null ? "text-muted" : bueno ? "text-pos" : "text-neg"}`}>

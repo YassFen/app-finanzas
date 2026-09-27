@@ -19,7 +19,7 @@ create table personas (
 -- ---------------------------------------------------------------------
 -- Categorías (árbol de 2 niveles: categoría -> subcategoría)
 --   type : ingreso | gasto | ahorro | inversion (las subcategorías heredan el del padre)
---   grupo: solo para gastos de primer nivel -> fijo | variable | supervivencia
+--   grupo: solo para gastos de primer nivel -> fijo | variable
 --          (las subcategorías heredan el grupo del padre)
 --   is_salary: marca la categoría "Sueldo"; es la base del % de supervivencia
 -- ---------------------------------------------------------------------
@@ -27,7 +27,7 @@ create table categories (
   id         uuid primary key default gen_random_uuid(),
   parent_id  uuid references categories(id) on delete restrict,
   type       text not null check (type in ('ingreso', 'gasto', 'ahorro', 'inversion')),
-  grupo      text check (grupo in ('fijo', 'variable', 'supervivencia')),
+  grupo      text check (grupo in ('fijo', 'variable')),
   name       text not null,
   sort_order int  not null default 0,
   is_salary  boolean not null default false,
@@ -158,9 +158,6 @@ select pg_temp.cat('gasto', 'variable', 'Educación', 25, array['Cursos', 'Títu
 select pg_temp.cat('gasto', 'variable', 'Ocio', 26, array['Comida', 'Compras', 'Netflix + Prime', 'Otro']);
 select pg_temp.cat('gasto', 'variable', 'Otros', 27,
   array['Muebles / Casa', 'Netflix', 'Comida pega Ratón', 'Transporte Ojitos', 'Farmacia / Doctor', 'Otro']);
-
--- Supervivencia: gasto real (solo para comparar; NO suma a egresos)
-select pg_temp.cat('gasto', 'supervivencia', 'Supervivencia', 30, array['Comida', 'Gastos personales', 'Otro']);
 
 -- Ahorro e inversiones (subcategoría = instrumento / cuenta)
 select pg_temp.cat('ahorro', null, 'Ahorro', 40, array['Mercado Pago', 'General']);

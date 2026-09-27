@@ -3,7 +3,7 @@
 //   Egresos  = gastos fijos + gastos variables + ASIGNACIÓN de supervivencia
 //   Delta    = ingresos − egresos − ahorro − inversiones
 //   Supervivencia (asignación fija) = sueldos del mes × % total, repartido entre ambos.
-//     El gasto real en categorías de grupo "supervivencia" NO suma a egresos: solo se compara.
+//     Es lo que se asigna a cada uno para su vida diaria; no se registran esos gastos.
 //   50/20/30 (como la hoja "Análisis Global"):
 //     balde "Gastos Fijos"          = fijos + variables
 //     balde "Gastos Variables"      = asignación de supervivencia
@@ -33,7 +33,7 @@ export function buildCategoryIndex(categories: Category[]): Map<string, Category
     const top = c.parent_id ? byId.get(c.parent_id) ?? c : c;
     index.set(c.id, {
       ...c,
-      grupoEfectivo: top.type === "gasto" ? top.grupo : null,
+      grupoEfectivo: top.type === "gasto" ? (top.grupo === "fijo" ? "fijo" : "variable") : null,
       esSueldo: top.is_salary,
       topId: top.id,
       topName: top.name,
@@ -78,7 +78,6 @@ export interface SupervivenciaPersona {
   nombre: string;
   porcentaje: number; // % del total de supervivencia que le toca
   asignado: number;
-  gastado: number;
 }
 
 export interface ResumenMes {
@@ -88,7 +87,6 @@ export interface ResumenMes {
   gastosFijos: number;
   gastosVariables: number;
   asignacionSupervivencia: number;
-  gastoRealSupervivencia: number;
   supervivencia: SupervivenciaPersona[];
   egresos: number;
   ahorro: number;
@@ -123,7 +121,6 @@ export function resumenMes(
 ): ResumenMes {
   const settings = settingsFor(periodo, settingsAll);
   let ingresos = 0, sueldos = 0, gastosFijos = 0, gastosVariables = 0, ahorro = 0, inversiones = 0;
-  const gastoSupervivenciaPorPersona = new Map<string | null, number>();
 
   for (const t of totales) {
     const cat = categorias.get(t.category_id);
@@ -135,9 +132,7 @@ export function resumenMes(
         break;
       case "gasto":
         if (cat.grupoEfectivo === "fijo") gastosFijos += t.total;
-        else if (cat.grupoEfectivo === "supervivencia")
-          gastoSupervivenciaPorPersona.set(t.persona_id, (gastoSupervivenciaPorPersona.get(t.persona_id) ?? 0) + t.total);
-        else gastosVariables += t.total; // "variable" o sin grupo
+        else gastosVariables += t.total;
         break;
       case "ahorro":
         ahorro += t.total;
@@ -151,9 +146,7 @@ export function resumenMes(
   const asignacionSupervivencia = (sueldos * Number(settings.survival_pct)) / 100;
 
   // Reparto: la persona con sort_order más bajo recibe survival_split_pct; la otra, el resto.
-  // Los gastos de supervivencia marcados "Ambos" se reparten con el mismo porcentaje.
   const ordenadas = [...personas].sort((a, b) => a.sort_order - b.sort_order).slice(0, 2);
-  const gastoAmbos = gastoSupervivenciaPorPersona.get(null) ?? 0;
   const supervivencia: SupervivenciaPersona[] = ordenadas.map((p, i) => {
     const porcentaje = i === 0 ? Number(settings.survival_split_pct) : 100 - Number(settings.survival_split_pct);
     return {
@@ -161,11 +154,8 @@ export function resumenMes(
       nombre: p.name,
       porcentaje,
       asignado: (asignacionSupervivencia * porcentaje) / 100,
-      gastado: (gastoSupervivenciaPorPersona.get(p.id) ?? 0) + (gastoAmbos * porcentaje) / 100,
     };
   });
-  const gastoRealSupervivencia = [...gastoSupervivenciaPorPersona.values()].reduce((a, b) => a + b, 0);
-
   const egresos = gastosFijos + gastosVariables + asignacionSupervivencia;
   const delta = ingresos - egresos - ahorro - inversiones;
 
@@ -207,8 +197,7 @@ export function resumenMes(
   ];
 
   return {
-    periodo, ingresos, sueldos, gastosFijos, gastosVariables, asignacionSupervivencia,
-    gastoRealSupervivencia, supervivencia, egresos, ahorro, inversiones, delta, settings, distribucion,
+    periodo, ingresos, sueldos, gastosFijos, gastosVariables, asignacionSupervivencia, supervivencia, egresos, ahorro, inversiones, delta, settings, distribucion,
   };
 }
 

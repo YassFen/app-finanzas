@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
+import ThemeToggle from "./ThemeToggle";
+import { APP_NAME, type Tema } from "@/lib/types";
 
 const I = {
   home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
   list: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />,
   plus: <path d="M12 5v14M5 12h14" />,
-  target: (
+  table: (
     <>
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1" />
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 10h18M3 15h18M9 4v16" />
     </>
   ),
   more: <path d="M4 6h16M4 12h16M4 18h16" />,
@@ -30,13 +31,14 @@ const MOBILE = [
   { href: "/", label: "Inicio", icon: I.home },
   { href: "/movimientos", label: "Movimientos", icon: I.list },
   { href: "/movimientos/nuevo", label: "Nuevo", icon: I.plus, primary: true },
-  { href: "/presupuesto", label: "Presupuesto", icon: I.target },
+  { href: "/general", label: "General", icon: I.table },
   { href: "/mas", label: "Más", icon: I.more },
 ];
 
 const DESKTOP = [
   { href: "/", label: "Inicio" },
   { href: "/movimientos", label: "Movimientos" },
+  { href: "/general", label: "General" },
   { href: "/presupuesto", label: "Presupuesto" },
   { href: "/tendencias", label: "Tendencias" },
   { href: "/ahorro", label: "Ahorro" },
@@ -44,33 +46,45 @@ const DESKTOP = [
   { href: "/importar", label: "Importar" },
 ];
 
-export default function Nav() {
+export default function Nav({ tema }: { tema: Tema }) {
   const pathname = usePathname();
   const mes = useSearchParams().get("mes");
   const withMes = (href: string) => (mes ? `${href}?mes=${mes}` : href);
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : href === "/movimientos" ? pathname === "/movimientos" : pathname.startsWith(href);
-  const masActivo = ["/mas", "/tendencias", "/ahorro", "/categorias", "/importar"].some((p) => pathname.startsWith(p));
+  const masActivo = ["/mas", "/tendencias", "/ahorro", "/categorias", "/importar", "/presupuesto"].some((p) => pathname.startsWith(p));
 
   return (
     <>
-      {/* Escritorio: barra superior */}
-      <header className="hidden md:block border-b border-border bg-surface">
-        <nav className="mx-auto max-w-5xl flex items-center gap-1 px-4 h-14">
-          <span className="font-semibold mr-4">Finanzas</span>
-          {DESKTOP.map((l) => (
-            <Link
-              key={l.href}
-              href={withMes(l.href)}
-              className={`px-3 py-1.5 rounded-lg text-sm ${isActive(l.href) ? "bg-surface-2 font-semibold" : "text-muted hover:text-text"}`}
-            >
-              {l.label}
+      <header className="header-grad sticky top-0 z-20 shadow-sm">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex items-center gap-3 h-12 md:h-14">
+            <Link href={withMes("/")} className="flex items-center gap-2 min-w-0">
+              <span className="grid place-items-center size-7 rounded-lg bg-white/20 text-sm font-bold shrink-0" aria-hidden>
+                $
+              </span>
+              <span className="font-semibold truncate text-[15px] md:text-base">{APP_NAME}</span>
             </Link>
-          ))}
-          <Link href={withMes("/movimientos/nuevo")} className="btn-primary ml-auto !py-1.5">
-            + Nuevo movimiento
-          </Link>
-        </nav>
+            <ThemeToggle inicial={tema} className="ml-auto shrink-0" />
+            <Link
+              href={withMes("/movimientos/nuevo")}
+              className="hidden md:inline-flex items-center rounded-xl bg-white px-3 py-1.5 text-sm font-semibold text-[#1c4f93] hover:bg-white/90"
+            >
+              + Nuevo movimiento
+            </Link>
+          </div>
+          <nav className="hidden md:flex gap-1 pb-2 -mt-1">
+            {DESKTOP.map((l) => (
+              <Link
+                key={l.href}
+                href={withMes(l.href)}
+                className={`px-3 py-1 rounded-lg text-sm ${isActive(l.href) ? "bg-white/25 font-semibold" : "text-white/85 hover:bg-white/10"}`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
       </header>
 
       {/* Móvil: barra inferior */}
@@ -85,7 +99,7 @@ export default function Nav() {
                   className={`flex flex-col items-center gap-0.5 py-2 text-[11px] ${active ? "text-accent font-semibold" : "text-muted"}`}
                 >
                   {l.primary ? (
-                    <span className="grid place-items-center size-10 -mt-1 rounded-full bg-accent text-accent-fg">
+                    <span className="grid place-items-center size-11 -mt-4 rounded-full header-grad shadow-lg ring-4 ring-bg">
                       <Icon>{l.icon}</Icon>
                     </span>
                   ) : (

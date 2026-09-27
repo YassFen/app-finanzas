@@ -15,7 +15,7 @@ export type ActionState = { ok?: boolean; error?: string; message?: string } | n
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const TIPOS: CategoryType[] = ["ingreso", "gasto", "ahorro", "inversion"];
-const GRUPOS: Grupo[] = ["fijo", "variable", "supervivencia"];
+const GRUPOS: Grupo[] = ["fijo", "variable"];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function refrescar() {
@@ -70,6 +70,39 @@ export async function saveTransaction(_prev: ActionState, fd: FormData): Promise
   redirect(`/movimientos?mes=${period}`);
 }
 
+export type FilaCopia = { category_id: string; amount: number; persona_id: string | null; day: number };
+
+/** Crea en `mes` los gastos elegidos del mes anterior (con montos posiblemente editados). */
+export async function copyTransactions(mes: string, filas: FilaCopia[]): Promise<ActionState> {
+  await requireSession();
+  if (!isPeriod(mes)) return { error: "Mes inválido." };
+  if (!Array.isArray(filas) || filas.length === 0) return { error: "No elegiste ningún gasto." };
+  if (filas.length > 300) return { error: "Demasiadas filas." };
+  const [categorias, personas] = await Promise.all([getCategoryIndex(), getPersonas()]);
+  const [y, m] = mes.split("-").map(Number);
+  const diasDelMes = new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+  const rows = [];
+  for (const f of filas) {
+    const cat = categorias.get(f.category_id);
+    if (!cat || cat.type !== "gasto") return { error: "Hay una categoría inválida." };
+    if (!Number.isSafeInteger(f.amount) || f.amount <= 0) return { error: `Monto inválido en ${cat.fullName}.` };
+    if (f.persona_id && !personas.some((p) => p.id === f.persona_id)) return { error: "Persona inválida." };
+    const dia = Math.min(Math.max(1, Math.trunc(Number(f.day)) || 1), diasDelMes);
+    rows.push({
+      date: `${mes}-${String(dia).padStart(2, "0")}`,
+      period: periodToDate(mes),
+      amount: f.amount,
+      category_id: cat.id,
+      persona_id: f.persona_id || null,
+      note: null,
+    });
+  }
+  check(await db().from("transactions").insert(rows));
+  refrescar();
+  redirect(`/movimientos?mes=${mes}&tipo=gasto`);
+}
+
 export async function deleteTransaction(fd: FormData): Promise<void> {
   await requireSession();
   const id = str(fd, "id");
@@ -102,7 +135,7 @@ export async function createCategory(_prev: ActionState, fd: FormData): Promise<
     if (!TIPOS.includes(type)) return { error: "Elige un tipo." };
     if (type === "gasto") {
       grupo = str(fd, "grupo") as Grupo;
-      if (!GRUPOS.includes(grupo)) return { error: "Elige el grupo del gasto (fijo, variable o supervivencia)." };
+      if (!GRUPOS.includes(grupo)) return { error: "Elige el grupo del gasto (fijo o variable)." };
     }
   }
   const hermanos = cats.filter((c) => c.parent_id === (parentId || null));

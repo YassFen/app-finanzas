@@ -1,6 +1,10 @@
-# Finanzas Ratón & Ojitos
+# Finanzas Familia Fairlie Darwish
 
-App web privada para llevar las finanzas del hogar mes a mes. Reemplaza `FINANZAS.xlsx`.
+App web privada para llevar el registro mes a mes de las finanzas del hogar. Reemplaza `FINANZAS.xlsx`.
+
+**Pantallas:** Resumen del mes · Movimientos (con "copiar gastos del mes anterior") · Vista general del año (tipo Excel,
+con categorías desplegables) · Presupuesto (supervivencia + 50/20/30) · Tendencias · Ahorro · Categorías · Importar.
+Modo claro, oscuro o del sistema (se elige arriba a la derecha y se recuerda por dispositivo).
 
 **Stack:** Next.js 16 (App Router, TypeScript, Tailwind 4) · Supabase (Postgres) · Recharts · Vercel.
 
@@ -36,7 +40,7 @@ privado/                               Tu Excel y los CSV generados. Está en .g
 | 50/20/30, balde "Gastos Variables" | Asignación de supervivencia |
 | 50/20/30, balde "Ahorro e Inversiones" | Aportes netos (aportes − retiros) |
 
-- Los gastos reales en la categoría **Supervivencia** no suman a egresos: solo se comparan contra lo asignado a cada uno.
+- La supervivencia es solo una **asignación**: lo que le toca a cada uno para su vida diaria. Esos gastos personales no se registran en la app.
 - Los porcentajes (supervivencia y 50/20/30) rigen **desde el mes en que se guardan en adelante**, hasta el próximo cambio.
 - El ahorro y la inversión aceptan **retiros o rescates**, que se guardan como montos negativos, para que el saldo acumulado sea real.
 
@@ -128,6 +132,7 @@ No hay cuentas ni invitaciones:
 
 **Movimientos**
 - [ ] Crear un gasto (ej. Departamento / Supermercado, $10.000) y verlo en Movimientos y en el Resumen.
+- [ ] "Copiar gastos del mes anterior": marcar solo fijos, ajustar un monto y agregarlos al mes.
 - [ ] "Guardar y agregar otro" limpia el monto y la nota, pero mantiene la categoría y la fecha.
 - [ ] Editar el movimiento (monto, persona, nota) y verificar el cambio.
 - [ ] Cambiar el "Mes contable" a otro mes y verificar que aparece en ese mes.
@@ -143,14 +148,14 @@ No hay cuentas ni invitaciones:
 - [ ] Cambiar el % de supervivencia y el reparto: se recalcula lo asignado a cada uno.
 - [ ] Los % objetivo que no suman 100 muestran un error.
 - [ ] Un cambio guardado en un mes aplica a los meses siguientes, pero no a los anteriores.
-- [ ] Registrar un gasto en Supervivencia para Ratón: sube "Gastado" de Ratón, pero **no** cambian los egresos.
 
 **Importación y datos históricos**
 - [ ] Importar `historico.csv` y `presupuestos.csv`.
 - [ ] Comparar 3 meses al azar del Resumen contra el Excel (ingresos, egresos, ahorro, inversiones, delta).
 - [ ] Deshacer una importación y volver a importarla.
 
-**Tendencias y ahorro**
+**Vista general, tendencias y ahorro**
+- [ ] Vista general: los totales de cada mes coinciden con el Resumen; las categorías se despliegan en subcategorías.
 - [ ] Tendencias muestra variaciones para Supermercado, TC Ratón y Arriendo.
 - [ ] Definir una meta de ahorro (en % o en $) y verla en el gráfico.
 

@@ -5,7 +5,7 @@ import { Money, PageHeader, Progress, StatusBadge } from "@/components/ui";
 import { deleteBudgetSettings } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { getBudgetSettings, getCategoryIndex, getMonthlyTotals, getPersonas } from "@/lib/data";
-import { groupByPeriod, resumenMes, type Estado } from "@/lib/finanzas";
+import { groupByPeriod, resumenMes } from "@/lib/finanzas";
 import { addMonths, formatPct, parsePeriodParam, periodLabel, periodRange, periodShort } from "@/lib/format";
 import SettingsForm from "./SettingsForm";
 
@@ -38,45 +38,28 @@ export default async function PresupuestoPage({ searchParams }: PageProps<"/pres
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="h2">Supervivencia</h2>
           <span className="text-sm text-muted num">
-            {formatPct(s.survival_pct)} de sueldos (<Money value={r.sueldos} />) = <Money value={r.asignacionSupervivencia} className="font-semibold text-text" />
+            {formatPct(s.survival_pct)} de los sueldos (<Money value={r.sueldos} />)
           </span>
         </div>
         <p className="text-xs text-muted mt-1">
-          La asignación completa cuenta como egreso. Los gastos reales en la categoría Supervivencia solo se comparan acá
-          (los marcados &quot;Ambos&quot; se reparten con el mismo %).
+          Lo que se asigna a cada uno para su vida diaria, a partir de la suma de ambos sueldos. Cuenta como egreso del hogar.
         </p>
-        <div className="grid sm:grid-cols-2 gap-3 mt-3">
-          {r.supervivencia.map((p) => {
-            const restante = p.asignado - p.gastado;
-            const estado: Estado = p.asignado <= 0 ? "sin-datos" : p.gastado <= p.asignado ? "ok" : p.gastado <= p.asignado * 1.1 ? "alerta" : "critico";
-            return (
-              <div key={p.personaId} className="rounded-xl border border-border p-3">
-                <div className="flex justify-between items-baseline">
-                  <span className="font-medium">{p.nombre}</span>
-                  <span className="text-xs text-muted">{formatPct(p.porcentaje)} del total</span>
-                </div>
-                <div className="flex justify-between text-sm mt-2 num">
-                  <span className="text-muted">Asignado</span>
-                  <Money value={p.asignado} />
-                </div>
-                <div className="flex justify-between text-sm num">
-                  <span className="text-muted">Gastado (real)</span>
-                  <Money value={p.gastado} />
-                </div>
-                <div className="my-2">
-                  <Progress value={p.gastado} max={Math.max(p.asignado, p.gastado)} estado={estado} />
-                </div>
-                <div className="flex justify-between text-sm font-semibold num">
-                  <span>{restante >= 0 ? "Disponible" : "Excedido"}</span>
-                  <Money value={Math.abs(restante)} className={restante < 0 ? "text-neg" : "text-pos"} />
-                </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          {r.supervivencia.map((p, i) => (
+            <div key={p.personaId} className="card-tint p-3" style={{ "--tint": i === 0 ? "var(--series-1)" : "var(--series-5)" } as React.CSSProperties}>
+              <div className="flex justify-between items-baseline gap-2">
+                <span className="font-semibold">{p.nombre}</span>
+                <span className="text-xs text-muted">{formatPct(p.porcentaje)}</span>
               </div>
-            );
-          })}
+              <div className="text-xl font-semibold num mt-1"><Money value={p.asignado} /></div>
+              <div className="text-xs text-muted">asignado en {periodLabel(periodo)}</div>
+            </div>
+          ))}
         </div>
-        <Link href={`/movimientos/nuevo?mes=${periodo}`} className="text-sm text-accent inline-block mt-3">
-          + Registrar gasto de supervivencia
-        </Link>
+        <div className="flex justify-between text-sm font-semibold num mt-3 pt-2 border-t border-border">
+          <span>Total supervivencia</span>
+          <Money value={r.asignacionSupervivencia} />
+        </div>
       </section>
 
       {/* ---------------- 50/20/30 ---------------- */}

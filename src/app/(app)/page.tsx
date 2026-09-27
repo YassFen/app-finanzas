@@ -3,6 +3,7 @@ import MonthPicker from "@/components/MonthPicker";
 import { MonthlyChart } from "@/components/charts";
 import { EmptyState, Money, PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
+import { TYPE_COLORS, categoryColor } from "@/lib/colors";
 import { getBudgetSettings, getCategoryIndex, getMonthlyTotals, getPersonas } from "@/lib/data";
 import { groupByPeriod, resumenMes, variacion } from "@/lib/finanzas";
 import { addMonths, formatPct, parsePeriodParam, periodLabel, periodRange, periodShort } from "@/lib/format";
@@ -30,13 +31,20 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const porCategoria = new Map<string, { nombre: string; total: number }>();
   for (const t of porMes.get(periodo) ?? []) {
     const c = categorias.get(t.category_id);
-    if (!c || c.type !== "gasto" || c.grupoEfectivo === "supervivencia") continue;
+    if (!c || c.type !== "gasto") continue;
     const acc = porCategoria.get(c.topId) ?? { nombre: c.topName, total: 0 };
     acc.total += t.total;
     porCategoria.set(c.topId, acc);
   }
   const gastosCat = [...porCategoria.entries()].sort((a, b) => b[1].total - a[1].total);
   const maxCat = Math.max(1, ...gastosCat.map(([, g]) => g.total));
+  // Color fijo por categoría (según su orden en Categorías, no por monto)
+  const posicion = new Map(
+    [...categorias.values()]
+      .filter((c) => !c.parent_id && c.type === "gasto")
+      .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+      .map((c, i) => [c.id, i]),
+  );
 
   return (
     <>
@@ -44,24 +52,40 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <MonthPicker periodo={periodo} />
       </PageHeader>
 
+      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-3">
+        <Link href={`/movimientos/copiar?mes=${periodo}`} className="btn !py-2 shrink-0">
+          ⧉ Copiar gastos del mes anterior
+        </Link>
+        <Link href={`/general?anio=${periodo.slice(0, 4)}`} className="btn !py-2 shrink-0">
+          ▦ Vista general del año
+        </Link>
+      </div>
+
       {!hayDatosMes && (
         <div className="mb-4">
           <EmptyState>
             No hay movimientos en {periodLabel(periodo)}.{" "}
+            <Link href={`/movimientos/copiar?mes=${periodo}`} className="text-accent font-medium">Copiar gastos del mes anterior</Link>
+            {" · "}
             <Link href={`/movimientos/nuevo?mes=${periodo}`} className="text-accent font-medium">Agregar uno</Link>
             {" · "}
-            <Link href="/importar" className="text-accent font-medium">Importar histórico</Link>
+            <Link href="/importar" className="text-accent font-medium">Importar</Link>
           </EmptyState>
         </div>
       )}
 
       <section className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-        <Stat label="Ingresos" value={r.ingresos} variacion={var_(r.ingresos, prev.ingresos)} />
-        <Stat label="Egresos" value={r.egresos} variacion={var_(r.egresos, prev.egresos)} invertir />
-        <Stat label="Ahorro" value={r.ahorro} variacion={var_(r.ahorro, prev.ahorro)} />
-        <Stat label="Inversiones" value={r.inversiones} variacion={var_(r.inversiones, prev.inversiones)} />
+        <Stat label="Ingresos" color={TYPE_COLORS.ingreso} value={r.ingresos} variacion={var_(r.ingresos, prev.ingresos)} />
+        <Stat label="Egresos" color={TYPE_COLORS.gasto} value={r.egresos} variacion={var_(r.egresos, prev.egresos)} invertir />
+        <Stat label="Ahorro" color={TYPE_COLORS.ahorro} value={r.ahorro} variacion={var_(r.ahorro, prev.ahorro)} />
+        <Stat label="Inversiones" color={TYPE_COLORS.inversion} value={r.inversiones} variacion={var_(r.inversiones, prev.inversiones)} />
         <div className="col-span-2 md:col-span-1">
-          <Stat label="Delta (sobrante)" value={r.delta} hint="Ingresos − egresos − ahorro − inversiones" />
+          <Stat
+            label="Delta (sobrante)"
+            color={Math.round(r.delta) < 0 ? "var(--series-8)" : "var(--series-6)"}
+            value={r.delta}
+            hint="Ingresos − egresos − ahorro − inversiones"
+          />
         </div>
       </section>
 
@@ -69,11 +93,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <div className="card p-4">
           <h2 className="h2 mb-3">Egresos del mes</h2>
           <dl className="space-y-2 text-sm">
-            <Row label="Gastos fijos" value={r.gastosFijos} />
-            <Row label="Gastos variables" value={r.gastosVariables} />
+            <Row label="Gastos fijos" value={r.gastosFijos} color="var(--series-2)" />
+            <Row label="Gastos variables" value={r.gastosVariables} color="var(--series-4)" />
             <Row
               label={`Supervivencia (${formatPct(r.settings.survival_pct)} de sueldos)`}
               value={r.asignacionSupervivencia}
+              color="var(--series-5)"
             />
             <div className="border-t border-border pt-2">
               <Row label="Total egresos" value={r.egresos} strong />
@@ -101,19 +126,25 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <section className="card p-4 mt-3">
           <h2 className="h2 mb-3">Gastos por categoría</h2>
           <ul className="space-y-2.5">
-            {gastosCat.map(([id, g]) => (
-              <li key={id}>
-                <Link href={`/tendencias?cat=${id}&mes=${periodo}`} className="block">
-                  <div className="flex justify-between text-sm">
-                    <span>{g.nombre}</span>
-                    <Money value={g.total} />
-                  </div>
-                  <div className="h-1.5 mt-1 rounded-full bg-surface-2">
-                    <div className="h-1.5 rounded-full bg-[var(--series-2)]" style={{ width: `${(g.total / maxCat) * 100}%` }} />
-                  </div>
-                </Link>
-              </li>
-            ))}
+            {gastosCat.map(([id, g]) => {
+              const color = categoryColor(posicion.get(id) ?? 0);
+              return (
+                <li key={id}>
+                  <Link href={`/tendencias?cat=${id}&mes=${periodo}`} className="block">
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <span className="size-2.5 rounded-sm" style={{ background: color }} aria-hidden />
+                        {g.nombre}
+                      </span>
+                      <Money value={g.total} />
+                    </div>
+                    <div className="h-2 mt-1 rounded-full bg-surface-2">
+                      <div className="h-2 rounded-full" style={{ width: `${(g.total / maxCat) * 100}%`, background: color }} />
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -129,45 +160,22 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
               ahorro: Math.round(s.ahorro + s.inversiones),
             }))}
           />
-          <details className="mt-3">
-            <summary className="text-sm text-accent cursor-pointer">Ver tabla</summary>
-            <div className="overflow-x-auto mt-2">
-              <table className="w-full text-sm num">
-                <thead className="text-muted text-xs">
-                  <tr className="text-right">
-                    <th className="text-left font-medium py-1">Mes</th>
-                    <th className="font-medium">Ingresos</th>
-                    <th className="font-medium">Egresos</th>
-                    <th className="font-medium">Ahorro+Inv.</th>
-                    <th className="font-medium">Delta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...serieVisible].reverse().map((s) => (
-                    <tr key={s.periodo} className="text-right border-t border-border">
-                      <td className="text-left py-1.5">
-                        <Link href={`/?mes=${s.periodo}`} className="text-accent">{periodShort(s.periodo)}</Link>
-                      </td>
-                      <td><Money value={s.ingresos} /></td>
-                      <td><Money value={s.egresos} /></td>
-                      <td><Money value={s.ahorro + s.inversiones} /></td>
-                      <td><Money value={s.delta} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
+          <p className="text-sm mt-3">
+            <Link href={`/general?anio=${periodo.slice(0, 4)}`} className="text-accent">Ver el detalle mes a mes en la vista General →</Link>
+          </p>
         </section>
       )}
     </>
   );
 }
 
-function Row({ label, value, strong }: { label: string; value: number; strong?: boolean }) {
+function Row({ label, value, strong, color }: { label: string; value: number; strong?: boolean; color?: string }) {
   return (
     <div className={`flex justify-between gap-2 ${strong ? "font-semibold" : ""}`}>
-      <dt className={strong ? "" : "text-muted"}>{label}</dt>
+      <dt className={`flex items-center gap-2 ${strong ? "" : "text-muted"}`}>
+        {color && <span className="size-2 rounded-full" style={{ background: color }} aria-hidden />}
+        {label}
+      </dt>
       <dd><Money value={value} /></dd>
     </div>
   );

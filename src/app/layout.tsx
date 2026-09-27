@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { cookies } from "next/headers";
+import { APP_NAME, THEME_COOKIE } from "@/lib/types";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -8,8 +10,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Finanzas",
-  description: "Finanzas del hogar de Ratón y Ojitos",
+  title: APP_NAME,
+  description: "Registro mes a mes de las finanzas del hogar",
   robots: { index: false, follow: false },
   appleWebApp: { capable: true, title: "Finanzas", statusBarStyle: "default" },
 };
@@ -17,15 +19,15 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f4f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#111110" },
-  ],
+  themeColor: "#2a78d6",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Tema elegido en este dispositivo (sin cookie = sigue al sistema)
+  const tema = (await cookies()).get(THEME_COOKIE)?.value;
+  const dataTheme = tema === "oscuro" ? "dark" : tema === "claro" ? "light" : undefined;
   return (
-    <html lang="es-CL" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="es-CL" data-theme={dataTheme} className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { saveTransaction, type ActionState } from "@/app/actions";
 import { useSubmitNoReset } from "./useSubmitNoReset";
+import { guardarCookie } from "@/lib/client-prefs";
 import { formatNumber } from "@/lib/format";
 import { PERSONA_COOKIE, type CategoryType } from "@/lib/types";
 
@@ -52,7 +53,7 @@ export default function TransactionForm({
 
   const [state, action, pending] = useActionState(async (prev: ActionState, fd: FormData) => {
     // Recuerda la última persona usada en este dispositivo (la lee el servidor al abrir el formulario)
-    document.cookie = `${PERSONA_COOKIE}=${encodeURIComponent(personaId || "ambos")}; path=/; max-age=31536000; samesite=lax`;
+    guardarCookie(PERSONA_COOKIE, personaId || "ambos");
     const res = await saveTransaction(prev, fd);
     if (res?.ok) {
       setAmount("");

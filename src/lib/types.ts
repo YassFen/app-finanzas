@@ -1,5 +1,5 @@
 export type CategoryType = "ingreso" | "gasto" | "ahorro" | "inversion";
-export type Grupo = "fijo" | "variable" | "supervivencia";
+export type Grupo = "fijo" | "variable";
 
 /** Mes contable en formato "YYYY-MM". */
 export type Periodo = string;
@@ -78,8 +78,13 @@ export const TYPE_LABELS: Record<CategoryType, string> = {
 export const GRUPO_LABELS: Record<Grupo, string> = {
   fijo: "Fijo",
   variable: "Variable",
-  supervivencia: "Supervivencia",
 };
 
 /** Cookie (no sensible) con la última persona elegida en el formulario de este dispositivo. */
 export const PERSONA_COOKIE = "finanzas_persona";
+
+/** Tema visual elegido en el dispositivo. */
+export type Tema = "sistema" | "claro" | "oscuro";
+export const THEME_COOKIE = "finanzas_tema";
+
+export const APP_NAME = "Finanzas Familia Fairlie Darwish";

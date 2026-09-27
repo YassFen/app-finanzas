@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
-/* Tokens de color: cambian solos con el modo oscuro del sistema */
+/* Tokens de color. Tema: sistema por defecto; data-theme="light"|"dark" en <html> lo fuerza. */
 :root {
-  --bg: #f4f4f1;
-  --surface: #fcfcfb;
-  --surface-2: #f0efec;
+  color-scheme: light;
+  --bg: #f3f4f7;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
   --text: #0b0b0b;
   --muted: #52514e;
-  --border: #e2e1dc;
+  --border: #e1e3e8;
   --accent: #2a78d6;
   --accent-fg: #ffffff;
   --pos: #006300;
@@ -17,15 +18,23 @@
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-critical: #d03b3b;
-  /* series de gráficos */
-  --series-1: #2a78d6; /* ingresos */
-  --series-2: #eb6834; /* egresos */
-  --series-3: #1baf7a; /* ahorro + inversiones */
-  --grid: #e7e6e2;
+  /* paleta categórica (orden fijo) */
+  --series-1: #2a78d6; /* azul: ingresos */
+  --series-2: #eb6834; /* naranjo: gastos / egresos */
+  --series-3: #1baf7a; /* aqua: ahorro */
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7; /* violeta: inversiones */
+  --series-8: #e34948;
+  --grid: #e7e8ec;
+  --header-from: #2a78d6;
+  --header-to: #4a3aa7;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #111110;
     --surface: #1a1a19;
     --surface-2: #242422;
@@ -40,8 +49,49 @@
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
     --grid: #2c2c29;
+    --header-from: #1c4f93;
+    --header-to: #4a3aa7;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110;
+  --surface: #1a1a19;
+  --surface-2: #242422;
+  --text: #ffffff;
+  --muted: #c3c2b7;
+  --border: #33332f;
+  --accent: #3987e5;
+  --accent-fg: #ffffff;
+  --pos: #4cc24c;
+  --neg: #ef7b7b;
+  --warn-fg: #fab219;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --grid: #2c2c29;
+  --header-from: #1c4f93;
+  --header-to: #4a3aa7;
+}
+
+/* Colores por tipo de movimiento */
+:root {
+  --c-ingreso: var(--series-1);
+  --c-gasto: var(--series-2);
+  --c-ahorro: var(--series-3);
+  --c-inversion: var(--series-7);
 }
 
 @theme inline {
@@ -60,10 +110,6 @@
   --color-status-warning: var(--status-warning);
   --color-status-critical: var(--status-critical);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-}
-
-html {
-  color-scheme: light dark;
 }
 
 body {
@@ -104,4 +150,25 @@ body {
   .num {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Barra superior con degradado */
+.header-grad {
+  background: linear-gradient(100deg, var(--header-from), var(--header-to));
+  color: #ffffff;
+}
+
+/* Tarjeta teñida con un color (se pasa en --tint) */
+.card-tint {
+  background: color-mix(in oklab, var(--tint) 9%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--tint) 28%, var(--border));
+  border-radius: 1rem;
+}
+
+/* Filas desplazables horizontalmente sin barra visible (chips, accesos rápidos) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
