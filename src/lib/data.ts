@@ -32,6 +32,7 @@ export async function getTransactions(periodo: Periodo): Promise<Transaction[]> 
       .from("transactions")
       .select("id, date, period, amount, category_id, persona_id, note, import_batch, created_at")
       .eq("period", periodToDate(periodo))
+      .eq("is_adjustment", false) // los ajustes de saldo se ven solo en Ahorro
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .range(from, to),
@@ -113,4 +114,20 @@ export async function getImportBatches(): Promise<{ batch: string; count: number
     }
   }
   return [...map.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export type Ajuste = { id: string; date: string; period: string; amount: number; note: string | null; category_id: string };
+
+/** Ajustes de saldo de ahorro/inversión (no afectan el resumen mensual). */
+export async function getAdjustments(): Promise<Ajuste[]> {
+  const rows = await fetchAll<Ajuste>((a, b) =>
+    db()
+      .from("transactions")
+      .select("id, date, period, amount, note, category_id")
+      .eq("is_adjustment", true)
+      .order("period")
+      .order("created_at")
+      .range(a, b),
+  );
+  return rows.map((r) => ({ ...r, period: dateToPeriod(r.period), amount: Number(r.amount) }));
 }

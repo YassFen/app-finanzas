@@ -30,12 +30,19 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   const var_ = (a: number, b: number) => ((porMes.get(prev.periodo) ?? []).length ? variacion(a, b) : null);
 
   // Gasto del mes por categoría (fijos + variables), de mayor a menor
-  const porCategoria = new Map<string, { nombre: string; total: number }>();
+  const porCategoria = new Map<
+    string,
+    { nombre: string; total: number; subs: Map<string, { nombre: string; total: number }> }
+  >();
   for (const t of porMes.get(periodo) ?? []) {
     const c = categorias.get(t.category_id);
     if (!c || c.type !== "gasto") continue;
-    const acc = porCategoria.get(c.topId) ?? { nombre: c.topName, total: 0 };
+    const acc = porCategoria.get(c.topId) ?? { nombre: c.topName, total: 0, subs: new Map() };
     acc.total += t.total;
+    // Subcategoría (o la misma categoría si no tiene subcategorías)
+    const sub = acc.subs.get(c.id) ?? { nombre: c.parent_id ? c.name : "Sin subcategoría", total: 0 };
+    sub.total += t.total;
+    acc.subs.set(c.id, sub);
     porCategoria.set(c.topId, acc);
   }
   const gastosCat = [...porCategoria.entries()].sort((a, b) => b[1].total - a[1].total);
@@ -153,18 +160,45 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
               const color = categoryColor(posicion.get(id) ?? 0);
               return (
                 <li key={id}>
-                  <Link href={`/tendencias?cat=${id}&mes=${periodo}`} className="block">
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="size-2.5 rounded-sm" style={{ background: color }} aria-hidden />
-                        {g.nombre}
-                      </span>
-                      <Money value={g.total} />
-                    </div>
-                    <div className="h-2 mt-1 rounded-full bg-surface-2">
-                      <div className="h-2 rounded-full" style={{ width: `${(g.total / maxCat) * 100}%`, background: color }} />
-                    </div>
-                  </Link>
+                  {/* Cada categoría se despliega en sus subcategorías */}
+                  <details className="group">
+                    <summary className="block cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted text-[10px] w-2.5 transition-transform group-open:rotate-90" aria-hidden>▶</span>
+                          <span className="size-2.5 rounded-sm" style={{ background: color }} aria-hidden />
+                          {g.nombre}
+                        </span>
+                        <Money value={g.total} />
+                      </div>
+                      <div className="h-2 mt-1 rounded-full bg-surface-2">
+                        <div className="h-2 rounded-full" style={{ width: `${(g.total / maxCat) * 100}%`, background: color }} />
+                      </div>
+                    </summary>
+                    <ul className="mt-2 ml-5 pl-3 border-l-2 space-y-1.5" style={{ borderColor: color }}>
+                      {[...g.subs.entries()]
+                        .sort((a, b) => b[1].total - a[1].total)
+                        .map(([subId, s]) => (
+                          <li key={subId} className="text-sm">
+                            <div className="flex justify-between gap-2">
+                              <span className="text-muted">{s.nombre}</span>
+                              <Money value={s.total} />
+                            </div>
+                            <div className="h-1 mt-0.5 rounded-full bg-surface-2">
+                              <div
+                                className="h-1 rounded-full opacity-70"
+                                style={{ width: `${g.total > 0 ? Math.max(0, (s.total / g.total) * 100) : 0}%`, background: color }}
+                              />
+                            </div>
+                          </li>
+                        ))}
+                      <li>
+                        <Link href={`/tendencias?cat=${id}&mes=${periodo}`} className="text-xs text-accent">
+                          Ver tendencia de {g.nombre} →
+                        </Link>
+                      </li>
+                    </ul>
+                  </details>
                 </li>
               );
             })}

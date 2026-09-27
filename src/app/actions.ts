@@ -113,6 +113,60 @@ export async function transferDeltaToSavings(_prev: ActionState, fd: FormData): 
 }
 
 // ---------------------------------------------------------------------------
+// Ajustes de saldo (ahorro / inversión)
+// ---------------------------------------------------------------------------
+
+/**
+ * Deja el saldo acumulado de un instrumento en el valor real indicado, registrando la
+ * diferencia como ajuste. Los ajustes NO cambian el resumen de ningún mes (ni ahorro ni delta).
+ */
+export async function adjustSavingsBalance(_prev: ActionState, fd: FormData): Promise<ActionState> {
+  await requireSession();
+  const mes = str(fd, "mes");
+  const categoryId = str(fd, "category_id");
+  const note = str(fd, "note").slice(0, 1000);
+  const txt = str(fd, "saldo");
+  const saldoReal = (txt.startsWith("-") ? -1 : 1) * Number(txt.replace(/\D/g, ""));
+  if (!isPeriod(mes)) return { error: "Mes inválido." };
+  if (txt.replace(/\D/g, "") === "" || !Number.isSafeInteger(saldoReal)) return { error: "Escribe el saldo real." };
+  const cat = (await getCategoryIndex()).get(categoryId);
+  if (!cat || (cat.type !== "ahorro" && cat.type !== "inversion")) return { error: "Elige un instrumento de ahorro o inversión." };
+
+  // Saldo registrado hasta ese mes (aportes, retiros y ajustes anteriores)
+  const filas = check(
+    await db().from("transactions").select("amount").eq("category_id", cat.id).lte("period", periodToDate(mes)),
+  ) ?? [];
+  const saldoActual = filas.reduce((s, f) => s + Number(f.amount), 0);
+  const diferencia = saldoReal - saldoActual;
+  if (diferencia === 0) return { error: "El saldo registrado ya es ese." };
+
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+  const [y, m] = mes.split("-").map(Number);
+  const fecha = hoy.startsWith(mes) ? hoy : `${mes}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
+  check(
+    await db().from("transactions").insert({
+      date: fecha,
+      period: periodToDate(mes),
+      amount: diferencia,
+      category_id: cat.id,
+      persona_id: null,
+      note: note || "Ajuste de saldo",
+      is_adjustment: true,
+    }),
+  );
+  refrescar();
+  return { ok: true, message: `Saldo de ${cat.fullName} ajustado a $${saldoReal.toLocaleString("es-CL")}.` };
+}
+
+export async function deleteAdjustment(fd: FormData): Promise<void> {
+  await requireSession();
+  const id = str(fd, "id");
+  if (!UUID_RE.test(id)) return;
+  check(await db().from("transactions").delete().eq("id", id).eq("is_adjustment", true));
+  refrescar();
+}
+
+// ---------------------------------------------------------------------------
 // Edición de celdas de la vista General
 // ---------------------------------------------------------------------------
 
@@ -126,6 +180,7 @@ export async function getCellMovements(categoryId: string, mes: string): Promise
     .select("id, date, amount, persona_id, note")
     .eq("category_id", categoryId)
     .eq("period", periodToDate(mes))
+    .eq("is_adjustment", false)
     .order("date");
   return check(res) ?? [];
 }
