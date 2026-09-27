@@ -61,7 +61,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <Stat label="Ahorro" value={r.ahorro} variacion={var_(r.ahorro, prev.ahorro)} />
         <Stat label="Inversiones" value={r.inversiones} variacion={var_(r.inversiones, prev.inversiones)} />
         <div className="col-span-2 md:col-span-1">
-          <Stat label="Delta (sobrante)" value={r.delta} variacion={var_(r.delta, prev.delta)} />
+          <Stat label="Delta (sobrante)" value={r.delta} hint="Ingresos − egresos − ahorro − inversiones" />
         </div>
       </section>
 

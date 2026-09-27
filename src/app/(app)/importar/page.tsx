@@ -1,5 +1,5 @@
 import ConfirmButton from "@/components/ConfirmButton";
-import { Money, PageHeader } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { deleteImportBatch } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { getImportBatches } from "@/lib/data";
@@ -44,7 +44,7 @@ export default async function ImportarPage() {
                 <span>
                   {new Date(b.created_at).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santiago" })}
                   {" · "}
-                  {b.count} movimientos · {periodShort(b.from)} a {periodShort(b.to)} · neto <Money value={b.total} />
+                  {b.count} movimientos · {periodShort(b.from)} a {periodShort(b.to)}
                 </span>
                 <form action={deleteImportBatch}>
                   <input type="hidden" name="batch" value={b.batch} />

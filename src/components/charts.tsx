@@ -21,6 +21,9 @@ const tooltipProps = {
   cursor: { stroke: "var(--border)", fill: "var(--surface-2)" },
 };
 
+/** Texto de leyenda con color de texto (el color de la serie va solo en la línea). */
+const legendText = (value: string) => <span style={{ color: "var(--muted)" }}>{value}</span>;
+
 /** $1,2M / $850k */
 function compact(n: number): string {
   const a = Math.abs(n);
@@ -48,7 +51,7 @@ export function MonthlyChart({ data }: { data: MonthlyPoint[] }) {
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         {Axes()}
         <Tooltip {...tooltipProps} />
-        <Legend iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--muted)" }} />
+        <Legend iconType="plainline" wrapperStyle={{ fontSize: 12 }} formatter={legendText} />
         <Line type="monotone" dataKey="ingresos" name="Ingresos" stroke="var(--series-1)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
         <Line type="monotone" dataKey="egresos" name="Egresos" stroke="var(--series-2)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
         <Line type="monotone" dataKey="ahorro" name="Ahorro + inversiones" stroke="var(--series-3)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
@@ -80,7 +83,7 @@ export function SavingsChart({ data, conMeta }: { data: { label: string; neto: n
       <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         {Axes()}
         <Tooltip {...tooltipProps} />
-        <Legend iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--muted)" }} />
+        <Legend iconType="plainline" wrapperStyle={{ fontSize: 12 }} formatter={legendText} />
         <ReferenceLine y={0} stroke="var(--border)" />
         <Bar dataKey="neto" name="Ahorro + inversión neto" fill="var(--series-3)" radius={[4, 4, 0, 0]} maxBarSize={28} />
         {conMeta && <Line type="stepAfter" dataKey="meta" name="Meta" stroke="var(--series-2)" strokeWidth={2} dot={false} connectNulls />}

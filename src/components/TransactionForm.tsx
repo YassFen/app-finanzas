@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { saveTransaction, type ActionState } from "@/app/actions";
+import { useSubmitNoReset } from "./useSubmitNoReset";
 import { formatNumber } from "@/lib/format";
 import { PERSONA_COOKIE, type CategoryType } from "@/lib/types";
 
@@ -60,6 +61,8 @@ export default function TransactionForm({
     return res;
   }, null);
 
+  const onSubmit = useSubmitNoReset(action);
+
   const tops = useMemo(() => categories.filter((c) => !c.parentId && c.type === type), [categories, type]);
   const subs = useMemo(() => categories.filter((c) => c.parentId === topId), [categories, topId]);
   const categoryId = subs.length ? subId : topId;
@@ -73,7 +76,7 @@ export default function TransactionForm({
   }
 
   return (
-    <form action={action} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       {initial.id && <input type="hidden" name="id" value={initial.id} />}
       <input type="hidden" name="category_id" value={categoryId} />
       <input type="hidden" name="persona_id" value={personaId} />

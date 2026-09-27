@@ -3,12 +3,14 @@
 import { useActionState, useState } from "react";
 import { saveSavingsGoal } from "@/app/actions";
 import type { SavingsGoal } from "@/lib/types";
+import { useSubmitNoReset } from "@/components/useSubmitNoReset";
 
 export default function GoalForm({ mes, meta }: { mes: string; meta: SavingsGoal | null }) {
   const [state, action, pending] = useActionState(saveSavingsGoal, null);
   const [kind, setKind] = useState<"monto" | "porcentaje">(meta?.kind ?? "porcentaje");
+  const onSubmit = useSubmitNoReset(action);
   return (
-    <form action={action} className="mt-3 flex flex-wrap gap-2 items-end">
+    <form onSubmit={onSubmit} className="mt-3 flex flex-wrap gap-2 items-end">
       <input type="hidden" name="mes" value={mes} />
       <label>
         <span className="label">Tipo</span>

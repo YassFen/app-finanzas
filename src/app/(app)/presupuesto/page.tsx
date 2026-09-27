@@ -112,7 +112,7 @@ export default async function PresupuestoPage({ searchParams }: PageProps<"/pres
           })}
         </ul>
         <p className="text-xs text-muted mt-3">
-          ✓ en objetivo · ! hasta 5 puntos fuera · ✕ más de 5 puntos fuera. En gastos es malo pasarse; en ahorro, quedarse corto.
+          ✓ en objetivo · ! cerca: hasta 5 puntos fuera · ✕ fuera: más de 5 puntos. En gastos es malo pasarse; en ahorro, quedarse corto.
         </p>
       </section>
 

@@ -173,7 +173,7 @@ export default async function TendenciasPage({ searchParams }: PageProps<"/tende
         vsAnterior: variacion(serie[i], serie[i - 1] ?? null),
         vsProm3: variacion(serie[i], promedioPrevio(serie, i, 3)),
         vsProm6: variacion(serie[i], promedioPrevio(serie, i, 6)),
-        tieneDatos: serie.some((x) => x !== 0),
+        tieneDatos: serie.slice(-7).some((x) => x !== 0), // este mes o alguno de los 6 anteriores
       };
     })
     .filter((r) => r.tieneDatos)
