@@ -1,7 +1,8 @@
 import TransactionForm from "@/components/TransactionForm";
 import { PageHeader } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
-import { addMonths, parsePeriodParam, todayISO } from "@/lib/format";
+import { mesElegido } from "@/lib/periodo";
+import { addMonths, todayISO } from "@/lib/format";
 import type { CategoryType } from "@/lib/types";
 import { formOptions } from "../form-data";
 
@@ -10,7 +11,7 @@ const TIPOS: CategoryType[] = ["gasto", "ingreso", "ahorro", "inversion"];
 export default async function NuevoMovimientoPage({ searchParams }: PageProps<"/movimientos/nuevo">) {
   await requireSession();
   const sp = await searchParams;
-  const periodo = parsePeriodParam(sp.mes);
+  const periodo = await mesElegido(sp.mes);
   const tipo = TIPOS.includes(sp.tipo as CategoryType) ? (sp.tipo as CategoryType) : "gasto";
   const { categories, personas, personaDefault } = await formOptions();
   const hoy = todayISO();

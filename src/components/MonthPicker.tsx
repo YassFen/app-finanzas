@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { addMonths, periodLabel } from "@/lib/format";
+import { useState } from "react";
+import { addMonths, currentPeriod, periodLabel } from "@/lib/format";
 
-/** ‹ Septiembre 2026 › — cambia el ?mes= manteniendo los demás parámetros. */
+/**
+ * ‹ Septiembre 2026 › — cambia el ?mes= manteniendo los demás parámetros.
+ * El mes elegido queda recordado en el dispositivo (lo guarda el proxy).
+ */
 export default function MonthPicker({ periodo }: { periodo: string }) {
+  const [hoy] = useState(currentPeriod);
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -33,6 +38,11 @@ export default function MonthPicker({ periodo }: { periodo: string }) {
       <Link href={href(addMonths(periodo, 1))} className="btn-sm !px-3 !py-2" aria-label="Mes siguiente">
         ›
       </Link>
+      {periodo !== hoy && (
+        <Link href={href(hoy)} className="btn-sm !py-2 ml-1" title={`Ir a ${periodLabel(hoy)}`}>
+          Hoy
+        </Link>
+      )}
     </div>
   );
 }

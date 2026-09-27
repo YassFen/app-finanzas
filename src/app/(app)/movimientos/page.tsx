@@ -4,9 +4,10 @@ import { EmptyState, Money, PageHeader } from "@/components/ui";
 import MovementsList, { type FilaMovimiento } from "./MovementsList";
 import { formOptions } from "./form-data";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { TYPE_COLORS } from "@/lib/colors";
 import { getCategoryIndex, getPersonas, getTransactions } from "@/lib/data";
-import { dateToPeriod, parsePeriodParam, periodLabel } from "@/lib/format";
+import { dateToPeriod, periodLabel } from "@/lib/format";
 import { TYPE_LABELS, type CategoryType } from "@/lib/types";
 
 const FILTROS: { value: CategoryType | ""; label: string }[] = [
@@ -20,7 +21,7 @@ const FILTROS: { value: CategoryType | ""; label: string }[] = [
 export default async function MovimientosPage({ searchParams }: PageProps<"/movimientos">) {
   await requireSession();
   const sp = await searchParams;
-  const periodo = parsePeriodParam(sp.mes);
+  const periodo = await mesElegido(sp.mes);
   const tipo = FILTROS.some((f) => f.value === sp.tipo) ? (sp.tipo as CategoryType | "") : "";
   const [movs, categorias, personas] = await Promise.all([getTransactions(periodo), getCategoryIndex(), getPersonas()]);
   const nombrePersona = new Map(personas.map((p) => [p.id, p.name]));

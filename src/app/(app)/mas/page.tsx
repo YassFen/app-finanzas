@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { logout } from "@/app/login/actions";
 import { requireSession } from "@/lib/auth";
-import { parsePeriodParam } from "@/lib/format";
+import { mesElegido } from "@/lib/periodo";
 
 const LINKS = [
   { href: "/presupuesto", titulo: "Presupuesto", icono: "◎", color: "var(--series-5)", desc: "Supervivencia de cada uno y distribución 50/20/30." },
@@ -16,7 +16,7 @@ const LINKS = [
 
 export default async function MasPage({ searchParams }: PageProps<"/mas">) {
   await requireSession();
-  const mes = parsePeriodParam((await searchParams).mes);
+  const mes = await mesElegido((await searchParams).mes);
   return (
     <>
       <PageHeader title="Más" />

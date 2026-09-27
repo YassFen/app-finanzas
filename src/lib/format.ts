@@ -52,12 +52,6 @@ export function isPeriod(s: unknown): s is Periodo {
   return typeof s === "string" && PERIODO_RE.test(s);
 }
 
-/** Lee ?mes=YYYY-MM; si no es válido, devuelve el mes actual. */
-export function parsePeriodParam(value: string | string[] | undefined): Periodo {
-  const v = Array.isArray(value) ? value[0] : value;
-  return isPeriod(v) ? v : currentPeriod();
-}
-
 export const periodToDate = (p: Periodo) => `${p}-01`;
 export const dateToPeriod = (d: string): Periodo => d.slice(0, 7);
 

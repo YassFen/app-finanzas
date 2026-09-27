@@ -5,15 +5,16 @@ import { BalanceChart, SavingsChart } from "@/components/charts";
 import { EmptyState, Money, PageHeader, Progress } from "@/components/ui";
 import { deleteSavingsGoal } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { getCategoryIndex, getDataRange, getMonthlyTotals, getSavingsGoals } from "@/lib/data";
 import { goalFor, groupByPeriod } from "@/lib/finanzas";
-import { addMonths, formatNumber, formatPct, parsePeriodParam, periodLabel, periodRange, periodShort } from "@/lib/format";
+import { addMonths, formatNumber, formatPct, periodLabel, periodRange, periodShort } from "@/lib/format";
 import { TYPE_LABELS, type SavingsGoal } from "@/lib/types";
 import GoalForm from "./GoalForm";
 
 export default async function AhorroPage({ searchParams }: PageProps<"/ahorro">) {
   await requireSession();
-  const periodo = parsePeriodParam((await searchParams).mes);
+  const periodo = await mesElegido((await searchParams).mes);
   const [rango, cats, metas] = await Promise.all([getDataRange(), getCategoryIndex(), getSavingsGoals()]);
   const desde = rango && rango.first < periodo ? rango.first : addMonths(periodo, -11);
   const totales = await getMonthlyTotals(desde, periodo);

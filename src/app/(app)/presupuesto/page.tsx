@@ -4,14 +4,15 @@ import ConfirmButton from "@/components/ConfirmButton";
 import { Money, PageHeader, Progress, StatusBadge } from "@/components/ui";
 import { deleteBudgetSettings } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { getBudgetSettings, getCategoryIndex, getMonthlyTotals, getPersonas } from "@/lib/data";
 import { groupByPeriod, resumenMes } from "@/lib/finanzas";
-import { addMonths, formatPct, parsePeriodParam, periodLabel, periodRange, periodShort } from "@/lib/format";
+import { addMonths, formatPct, periodLabel, periodRange, periodShort } from "@/lib/format";
 import SettingsForm from "./SettingsForm";
 
 export default async function PresupuestoPage({ searchParams }: PageProps<"/presupuesto">) {
   await requireSession();
-  const periodo = parsePeriodParam((await searchParams).mes);
+  const periodo = await mesElegido((await searchParams).mes);
   const desde = addMonths(periodo, -11);
   const [totales, categorias, personas, settings] = await Promise.all([
     getMonthlyTotals(desde, periodo),

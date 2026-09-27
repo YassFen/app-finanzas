@@ -2,16 +2,17 @@ import Link from "next/link";
 import MonthPicker from "@/components/MonthPicker";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { categoryColor } from "@/lib/colors";
 import { getCategoryIndex, getPersonas, getTransactions } from "@/lib/data";
-import { addMonths, isPeriod, parsePeriodParam, periodLabel } from "@/lib/format";
+import { addMonths, isPeriod, periodLabel } from "@/lib/format";
 import CopyForm, { type ItemCopia } from "./CopyForm";
 import SourcePicker from "./SourcePicker";
 
 export default async function CopiarPage({ searchParams }: PageProps<"/movimientos/copiar">) {
   await requireSession();
   const sp = await searchParams;
-  const periodo = parsePeriodParam(sp.mes);
+  const periodo = await mesElegido(sp.mes);
   // Mes de origen: ?desde=YYYY-MM (dentro de los 12 meses previos); por defecto el mes anterior
   const desdeParam = typeof sp.desde === "string" ? sp.desde : "";
   const anterior =

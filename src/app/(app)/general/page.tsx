@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { TYPE_COLORS, categoryColor } from "@/lib/colors";
 import { getBudgetSettings, getCategoryIndex, getMonthlyTotals, getPersonas } from "@/lib/data";
 import { groupByPeriod, resumenMes } from "@/lib/finanzas";
@@ -14,7 +15,8 @@ export default async function GeneralPage({ searchParams }: PageProps<"/general"
   await requireSession();
   const sp = await searchParams;
   const actual = currentPeriod();
-  const anio = /^\d{4}$/.test(String(sp.anio)) ? Number(sp.anio) : Number(actual.slice(0, 4));
+  // Año por defecto: el del último mes elegido en este dispositivo
+  const anio = /^\d{4}$/.test(String(sp.anio)) ? Number(sp.anio) : Number((await mesElegido()).slice(0, 4));
   const periodos = Array.from({ length: 12 }, (_, i) => `${anio}-${String(i + 1).padStart(2, "0")}`);
 
   const [totales, categorias, personas, settings] = await Promise.all([

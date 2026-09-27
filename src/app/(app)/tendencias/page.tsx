@@ -3,9 +3,10 @@ import MonthPicker from "@/components/MonthPicker";
 import { TrendChart } from "@/components/charts";
 import { EmptyState, Money, PageHeader } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { getCategoryIndex, getMonthlyTotals } from "@/lib/data";
 import { promedioPrevio, variacion } from "@/lib/finanzas";
-import { addMonths, formatVariacion, parsePeriodParam, periodLabel, periodRange, periodShort } from "@/lib/format";
+import { addMonths, formatVariacion, periodLabel, periodRange, periodShort } from "@/lib/format";
 import { TYPE_LABELS, type CategoryInfo, type CategoryType, type MonthlyTotal } from "@/lib/types";
 
 const RANGOS = [6, 12, 24];
@@ -32,7 +33,7 @@ function claseVar(v: number | null, tipo: CategoryType) {
 export default async function TendenciasPage({ searchParams }: PageProps<"/tendencias">) {
   await requireSession();
   const sp = await searchParams;
-  const periodo = parsePeriodParam(sp.mes);
+  const periodo = await mesElegido(sp.mes);
   const meses = RANGOS.includes(Number(sp.meses)) ? Number(sp.meses) : 12;
   const catId = typeof sp.cat === "string" ? sp.cat : "";
 

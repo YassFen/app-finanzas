@@ -88,3 +88,6 @@ export type Tema = "sistema" | "claro" | "oscuro";
 export const THEME_COOKIE = "finanzas_tema";
 
 export const APP_NAME = "Finanzas Familia Fairlie Darwish";
+
+/** Último mes elegido en este dispositivo (lo guarda el proxy al navegar con ?mes=). */
+export const MES_COOKIE = "finanzas_mes";

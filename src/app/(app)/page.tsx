@@ -4,14 +4,15 @@ import { MonthlyChart } from "@/components/charts";
 import DeltaToSavings from "@/components/DeltaToSavings";
 import { EmptyState, Money, PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { requireSession } from "@/lib/auth";
+import { mesElegido } from "@/lib/periodo";
 import { TYPE_COLORS, categoryColor } from "@/lib/colors";
 import { getBudgetSettings, getCategoryIndex, getMonthlyTotals, getPersonas } from "@/lib/data";
 import { groupByPeriod, resumenMes, variacion } from "@/lib/finanzas";
-import { addMonths, formatPct, parsePeriodParam, periodLabel, periodRange, periodShort } from "@/lib/format";
+import { addMonths, formatPct, periodLabel, periodRange, periodShort } from "@/lib/format";
 
 export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   await requireSession();
-  const periodo = parsePeriodParam((await searchParams).mes);
+  const periodo = await mesElegido((await searchParams).mes);
   const desde = addMonths(periodo, -11);
   const [totales, categorias, personas, settings] = await Promise.all([
     getMonthlyTotals(desde, periodo),
